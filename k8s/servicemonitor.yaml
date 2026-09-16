@@ -1,0 +1,23 @@
+# Requires the Prometheus Operator CRDs (kube-prometheus-stack). If you use
+# plain Prometheus with static/file_sd config instead, add a scrape job
+# pointing at the Service above (port 9101, path /metrics) rather than this.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: github-actions-exporter
+  namespace: github-actions-exporter
+  labels:
+    app.kubernetes.io/name: github-actions-exporter
+    # Match whatever label your Prometheus Operator's serviceMonitorSelector expects.
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: github-actions-exporter
+  namespaceSelector:
+    matchNames:
+      - github-actions-exporter
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 60s

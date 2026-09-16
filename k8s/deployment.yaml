@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-actions-exporter
+  namespace: github-actions-exporter
+  labels:
+    app.kubernetes.io/name: github-actions-exporter
+spec:
+  replicas: 1 # keep at 1: multiple replicas would double-count runs (no shared dedup state)
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: github-actions-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: github-actions-exporter
+    spec:
+      containers:
+        - name: exporter
+          image: REPLACE_ME/github-actions-exporter:latest
+          ports:
+            - name: metrics
+              containerPort: 9101
+          env:
+            - name: PORT
+              value: "9101"
+            - name: POLL_INTERVAL_SECONDS
+              value: "60"
+            - name: RUNS_PER_REPO
+              value: "30"
+            - name: ACTIVE_SINCE_DAYS
+              value: "14"
+            - name: COLLECT_RUNNER_STATUS
+              value: "false" # enable only if you accept the cardinality cost with ARC ephemeral runners
+            - name: METRIC_TTL_DAYS
+              value: "30" # stale repo/workflow/job label combos are pruned after this many days
+            - name: GITHUB_APP_PRIVATE_KEY_PATH
+              value: /etc/github-app/private-key.pem
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: github-actions-exporter
+                  key: github-app-id
+            # - name: GITHUB_APP_INSTALLATION_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: github-actions-exporter
+            #       key: github-app-installation-id
+          volumeMounts:
+            - name: github-app-key
+              mountPath: /etc/github-app
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+      volumes:
+        - name: github-app-key
+          secret:
+            secretName: github-actions-exporter
+            items:
+              - key: private-key.pem
+                path: private-key.pem
