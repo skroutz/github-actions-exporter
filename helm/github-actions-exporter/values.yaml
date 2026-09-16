@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: REPLACE_ME/github-actions-exporter
+  repository: ghcr.io/skroutz/github-actions-exporter
   tag: latest
   pullPolicy: IfNotPresent
 

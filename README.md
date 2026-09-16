@@ -149,6 +149,18 @@ Secret can be chart-managed with `secret.create=true`, `secret.appId`, and
 `secret.privateKey`; prefer External Secrets Operator or a pre-created Secret
 for production.
 
+The repository includes separate GitHub Actions workflows for publishing the
+Docker image and Helm chart. Pushing a tag such as `v0.1.0` publishes:
+
+```text
+ghcr.io/<owner>/<repo>:v0.1.0
+oci://ghcr.io/<owner>/charts/github-actions-exporter:0.1.0
+```
+
+The Docker image is built for `linux/amd64` and `linux/arm64`. The chart version
+comes from `helm/github-actions-exporter/Chart.yaml`, so bump that version when
+publishing a new chart release.
+
 Prefer syncing the secret from AWS Secrets Manager via
 [External Secrets Operator](https://external-secrets.io/) instead of
 `kubectl create secret` by hand, to avoid the private key ever touching a
