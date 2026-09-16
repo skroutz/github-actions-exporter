@@ -150,11 +150,11 @@ Secret can be chart-managed with `secret.create=true`, `secret.appId`, and
 for production.
 
 The repository includes separate GitHub Actions workflows for publishing the
-Docker image and Helm chart. Pushing a tag such as `v0.1.0` publishes:
+Docker image and Helm chart. Pushing a tag such as `v0.1.1` publishes:
 
 ```text
-ghcr.io/<owner>/<repo>:v0.1.0
-oci://ghcr.io/<owner>/charts/github-actions-exporter:0.1.0
+ghcr.io/<owner>/<repo>:v0.1.1
+oci://ghcr.io/<owner>/charts/github-actions-exporter:0.1.1
 ```
 
 The Docker image is built for `linux/amd64` and `linux/arm64`. The chart version
@@ -186,6 +186,15 @@ curl localhost:9101/metrics | grep github_actions_workflow_runs_total
   runner/queue-depth metrics natively (`gha-runner-scale-set-controller`
   `--set controller.metrics.enabled=true`) — that's usually a better source
   for "how many runners are online/busy" than polling the Actions API.
+- **`COLLECT_HISTOGRAMS`**: set to `true` to enable all duration histogram
+  metrics (workflow/job/step) when you only need counters and gauges. The
+  default is `false`.
+- **`HISTOGRAM_BUCKETS`**: set a comma-separated list of bucket upper bounds in
+  seconds, e.g. `60,300,900` (the default). This applies to the workflow,
+  job, and step duration histograms.
+- **`INCLUDE_RUN_NUMBER_LABEL`**: set to `true` to add a `run_number` label to
+  workflow/job/step metrics so you can distinguish runs by their numeric index;
+  the default is `false`.
 - **`METRIC_TTL_DAYS`**: lower it if you rename/archive repos frequently or
   have volatile matrix-job names and want stale series gone faster; raise it
   if you have long gaps between workflow runs (e.g. monthly release

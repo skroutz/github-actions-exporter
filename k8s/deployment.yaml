@@ -30,6 +30,12 @@ spec:
               value: "30"
             - name: ACTIVE_SINCE_DAYS
               value: "14"
+            - name: COLLECT_HISTOGRAMS
+              value: "false" # set to "false" to disable histogram metrics entirely
+            - name: HISTOGRAM_BUCKETS
+              value: "60,300,900" # default workflow/job/step duration buckets in seconds
+            - name: INCLUDE_RUN_NUMBER_LABEL
+              value: "false" # set to "true" to add run_number to workflow/job/step labels
             - name: COLLECT_RUNNER_STATUS
               value: "false" # enable only if you accept the cardinality cost with ARC ephemeral runners
             - name: METRIC_TTL_DAYS

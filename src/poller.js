@@ -44,11 +44,15 @@ function pruneIfNeeded(set) {
 }
 
 function baseLabels(repoFullName, run) {
-  return {
+  const labels = {
     repo: repoFullName,
     workflow: run.name || String(run.workflow_id),
     event: run.event,
   };
+  if (config.includeRunNumberLabel && run.run_number !== undefined) {
+    labels.run_number = String(run.run_number);
+  }
+  return labels;
 }
 
 async function pollRun(octokit, repoFullName, run) {
@@ -62,7 +66,7 @@ async function pollRun(octokit, repoFullName, run) {
   // once per run as soon as run_started_at is available.
   if (run.run_started_at && !seenQueueTimeRunIds.has(run.id)) {
     const queueSeconds = (new Date(run.run_started_at) - new Date(run.created_at)) / 1000;
-    if (queueSeconds >= 0) {
+    if (queueSeconds >= 0 && workflowQueueDurationSeconds) {
       workflowQueueDurationSeconds.observe(labels, queueSeconds);
       trackedMetrics.workflowQueueDurationSeconds.touch(labels);
     }
@@ -80,7 +84,7 @@ async function pollRun(octokit, repoFullName, run) {
 
   const start = run.run_started_at || run.created_at;
   const durationSeconds = (new Date(run.updated_at) - new Date(start)) / 1000;
-  if (durationSeconds >= 0) {
+  if (durationSeconds >= 0 && workflowRunDurationSeconds) {
     workflowRunDurationSeconds.observe(conclusionLabels, durationSeconds);
     trackedMetrics.workflowRunDurationSeconds.touch(conclusionLabels);
   }
@@ -106,13 +110,16 @@ export async function pollJobsForRun(octokit, repoFullName, run) {
         workflow: run.name || String(run.workflow_id),
         job: job.name,
         conclusion: job.conclusion || "unknown",
+        ...(config.includeRunNumberLabel && run.run_number !== undefined
+          ? { run_number: String(run.run_number) }
+          : {}),
       };
       jobRunsTotal.inc(jobLabels);
       trackedMetrics.jobRunsTotal.touch(jobLabels);
 
       if (job.started_at && job.completed_at) {
         const seconds = (new Date(job.completed_at) - new Date(job.started_at)) / 1000;
-        if (seconds >= 0) {
+        if (seconds >= 0 && jobRunDurationSeconds) {
           jobRunDurationSeconds.observe(jobLabels, seconds);
           trackedMetrics.jobRunDurationSeconds.touch(jobLabels);
         }
@@ -126,13 +133,16 @@ export async function pollJobsForRun(octokit, repoFullName, run) {
           step: step.name,
           step_number: String(step.number),
           conclusion: step.conclusion || "unknown",
+          ...(config.includeRunNumberLabel && run.run_number !== undefined
+            ? { run_number: String(run.run_number) }
+            : {}),
         };
         stepRunsTotal.inc(stepLabels);
         trackedMetrics.stepRunsTotal.touch(stepLabels);
 
         if (step.started_at && step.completed_at) {
           const seconds = (new Date(step.completed_at) - new Date(step.started_at)) / 1000;
-          if (seconds >= 0) {
+          if (seconds >= 0 && stepRunDurationSeconds) {
             stepRunDurationSeconds.observe(stepLabels, seconds);
             trackedMetrics.stepRunDurationSeconds.touch(stepLabels);
           }

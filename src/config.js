@@ -1,5 +1,18 @@
 // Central place for tunables so behavior can be changed via env vars
 // without touching code — needed for K8s ConfigMap/Secret driven config.
+const DEFAULT_HISTOGRAM_BUCKETS = [60, 300, 900];
+
+function parseHistogramBuckets(raw) {
+  if (!raw) return DEFAULT_HISTOGRAM_BUCKETS;
+
+  const values = raw
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isFinite(value) && value >= 0);
+
+  return values.length ? values : DEFAULT_HISTOGRAM_BUCKETS;
+}
+
 export const config = {
   appId: process.env.GITHUB_APP_ID,
   privateKey: (process.env.GITHUB_APP_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
@@ -22,6 +35,17 @@ export const config = {
   // Only consider repos pushed to in the last N days, to avoid wasting API
   // quota scanning stale/archived repos in large orgs.
   activeSinceDays: Number(process.env.ACTIVE_SINCE_DAYS || 14),
+
+  // Histogram metrics can be disabled when you don't want duration buckets.
+  // Default is enabled to preserve the previous behavior.
+  collectHistograms: process.env.COLLECT_HISTOGRAMS === undefined
+    ? true
+    : /^true$/i.test(process.env.COLLECT_HISTOGRAMS || "false"),
+  histogramBuckets: parseHistogramBuckets(process.env.HISTOGRAM_BUCKETS),
+
+  // Add a `run_number` label to workflow/job/step metrics when you want to
+  // distinguish runs by their numeric index. Off by default.
+  includeRunNumberLabel: /^true$/i.test(process.env.INCLUDE_RUN_NUMBER_LABEL || "false"),
 
   // Self-hosted runner status metrics can have high cardinality with ARC
   // ephemeral runners (a new runner name per job). Off by default.

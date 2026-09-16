@@ -21,6 +21,9 @@ config:
   pollIntervalSeconds: 60
   runsPerRepo: 30
   activeSinceDays: 14
+  collectHistograms: false
+  histogramBuckets: "60,300,900"
+  includeRunNumberLabel: false
   collectRunnerStatus: false
   metricTtlDays: 30
   logLevel: info
