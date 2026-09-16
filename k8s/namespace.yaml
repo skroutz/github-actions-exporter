@@ -1,0 +1,5 @@
+# Namespace suggestion — reuse your existing monitoring namespace if you have one.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: github-actions-exporter

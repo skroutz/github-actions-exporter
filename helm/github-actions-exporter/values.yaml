@@ -1,0 +1,56 @@
+replicaCount: 1
+
+image:
+  repository: REPLACE_ME/github-actions-exporter
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 9101
+
+config:
+  pollIntervalSeconds: 60
+  runsPerRepo: 30
+  activeSinceDays: 14
+  collectRunnerStatus: false
+  metricTtlDays: 30
+  logLevel: info
+  githubApiUrl: https://api.github.com
+  githubAppInstallationId: ""
+
+# Prefer an externally managed Secret in production. The default Secret name
+# matches the existing kubectl and raw-manifest deployment instructions.
+secret:
+  existingSecret: github-actions-exporter
+  create: false
+  appId: ""
+  privateKey: ""
+
+serviceMonitor:
+  enabled: false
+  interval: 60s
+  labels:
+    release: kube-prometheus-stack
+  additionalLabels: {}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
