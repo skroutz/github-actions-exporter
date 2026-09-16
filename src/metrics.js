@@ -1,4 +1,5 @@
 import { Registry, Gauge, Counter, Histogram, collectDefaultMetrics } from "prom-client";
+import { config } from "./config.js";
 
 export const registry = new Registry();
 collectDefaultMetrics({ register: registry });
@@ -65,31 +66,52 @@ export function pruneStaleMetrics(ttlDays) {
 // metrics. Instead we count/observe each completed run exactly once (see
 // poller.js's seen-run dedup) and keep labels bounded to repo/workflow/event.
 
+const workflowRunLabelNames = config.includeRunNumberLabel
+  ? ["repo", "workflow", "event", "conclusion", "run_number"]
+  : ["repo", "workflow", "event", "conclusion"];
+const workflowQueueLabelNames = config.includeRunNumberLabel
+  ? ["repo", "workflow", "event", "run_number"]
+  : ["repo", "workflow", "event"];
+const jobRunLabelNames = config.includeRunNumberLabel
+  ? ["repo", "workflow", "job", "conclusion", "run_number"]
+  : ["repo", "workflow", "job", "conclusion"];
+const stepRunLabelNames = config.includeRunNumberLabel
+  ? ["repo", "workflow", "job", "step", "step_number", "conclusion", "run_number"]
+  : ["repo", "workflow", "job", "step", "step_number", "conclusion"];
+
 export const workflowRunsTotal = new Counter({
   name: "github_actions_workflow_runs_total",
   help: "Total number of completed GitHub Actions workflow runs observed, by outcome.",
-  labelNames: ["repo", "workflow", "event", "conclusion"],
+  labelNames: workflowRunLabelNames,
   registers: [registry],
 });
 const workflowRunsTotalTracker = new LabelTracker(workflowRunsTotal);
 
-export const workflowRunDurationSeconds = new Histogram({
-  name: "github_actions_workflow_run_duration_seconds",
-  help: "Wall-clock duration of completed workflow runs, from run start to completion.",
-  labelNames: ["repo", "workflow", "event", "conclusion"],
-  buckets: [60, 300, 900],
-  registers: [registry],
-});
-const workflowRunDurationSecondsTracker = new LabelTracker(workflowRunDurationSeconds);
+export const workflowRunDurationSeconds = config.collectHistograms
+  ? new Histogram({
+      name: "github_actions_workflow_run_duration_seconds",
+      help: "Wall-clock duration of completed workflow runs, from run start to completion.",
+      labelNames: workflowRunLabelNames,
+      buckets: config.histogramBuckets,
+      registers: [registry],
+    })
+  : null;
+const workflowRunDurationSecondsTracker = workflowRunDurationSeconds
+  ? new LabelTracker(workflowRunDurationSeconds)
+  : null;
 
-export const workflowQueueDurationSeconds = new Histogram({
-  name: "github_actions_workflow_queue_duration_seconds",
-  help: "Time a workflow run spent queued before a runner (ARC) picked it up.",
-  labelNames: ["repo", "workflow", "event"],
-  buckets: [60, 300, 900],
-  registers: [registry],
-});
-const workflowQueueDurationSecondsTracker = new LabelTracker(workflowQueueDurationSeconds);
+export const workflowQueueDurationSeconds = config.collectHistograms
+  ? new Histogram({
+      name: "github_actions_workflow_queue_duration_seconds",
+      help: "Time a workflow run spent queued before a runner (ARC) picked it up.",
+      labelNames: workflowQueueLabelNames,
+      buckets: config.histogramBuckets,
+      registers: [registry],
+    })
+  : null;
+const workflowQueueDurationSecondsTracker = workflowQueueDurationSeconds
+  ? new LabelTracker(workflowQueueDurationSeconds)
+  : null;
 
 export const workflowRunsInProgress = new Gauge({
   name: "github_actions_workflow_runs_in_progress",
@@ -101,50 +123,44 @@ export const workflowRunsInProgress = new Gauge({
 export const jobRunsTotal = new Counter({
   name: "github_actions_job_runs_total",
   help: "Total number of completed GitHub Actions jobs observed, by outcome.",
-  labelNames: ["repo", "workflow", "job", "conclusion"],
+  labelNames: jobRunLabelNames,
   registers: [registry],
 });
 const jobRunsTotalTracker = new LabelTracker(jobRunsTotal);
 
-export const jobRunDurationSeconds = new Histogram({
-  name: "github_actions_job_run_duration_seconds",
-  help: "Wall-clock duration of completed jobs, from job start to completion.",
-  labelNames: ["repo", "workflow", "job", "conclusion"],
-  buckets: [60, 300, 900],
-  registers: [registry],
-});
-const jobRunDurationSecondsTracker = new LabelTracker(jobRunDurationSeconds);
+export const jobRunDurationSeconds = config.collectHistograms
+  ? new Histogram({
+      name: "github_actions_job_run_duration_seconds",
+      help: "Wall-clock duration of completed jobs, from job start to completion.",
+      labelNames: jobRunLabelNames,
+      buckets: config.histogramBuckets,
+      registers: [registry],
+    })
+  : null;
+const jobRunDurationSecondsTracker = jobRunDurationSeconds
+  ? new LabelTracker(jobRunDurationSeconds)
+  : null;
 
 export const stepRunsTotal = new Counter({
   name: "github_actions_step_runs_total",
   help: "Total number of completed GitHub Actions steps observed, by outcome.",
-  labelNames: [
-    "repo",
-    "workflow",
-    "job",
-    "step",
-    "step_number",
-    "conclusion",
-  ],
+  labelNames: stepRunLabelNames,
   registers: [registry],
 });
 const stepRunsTotalTracker = new LabelTracker(stepRunsTotal);
 
-export const stepRunDurationSeconds = new Histogram({
-  name: "github_actions_step_run_duration_seconds",
-  help: "Wall-clock duration of completed GitHub Actions steps.",
-  labelNames: [
-    "repo",
-    "workflow",
-    "job",
-    "step",
-    "step_number",
-    "conclusion",
-  ],
-  buckets: [60, 300, 900],
-  registers: [registry],
-});
-const stepRunDurationSecondsTracker = new LabelTracker(stepRunDurationSeconds);
+export const stepRunDurationSeconds = config.collectHistograms
+  ? new Histogram({
+      name: "github_actions_step_run_duration_seconds",
+      help: "Wall-clock duration of completed GitHub Actions steps.",
+      labelNames: stepRunLabelNames,
+      buckets: config.histogramBuckets,
+      registers: [registry],
+    })
+  : null;
+const stepRunDurationSecondsTracker = stepRunDurationSeconds
+  ? new LabelTracker(stepRunDurationSeconds)
+  : null;
 
 // Gated behind COLLECT_RUNNER_STATUS because ARC ephemeral runners get a new
 // name per job, which would otherwise cause unbounded label cardinality.
@@ -178,11 +194,11 @@ export const rateLimitRemaining = new Gauge({
 
 export const trackedMetrics = {
   workflowRunsTotal: workflowRunsTotalTracker,
-  workflowRunDurationSeconds: workflowRunDurationSecondsTracker,
-  workflowQueueDurationSeconds: workflowQueueDurationSecondsTracker,
+  ...(workflowRunDurationSeconds ? { workflowRunDurationSeconds: workflowRunDurationSecondsTracker } : {}),
+  ...(workflowQueueDurationSeconds ? { workflowQueueDurationSeconds: workflowQueueDurationSecondsTracker } : {}),
   jobRunsTotal: jobRunsTotalTracker,
-  jobRunDurationSeconds: jobRunDurationSecondsTracker,
+  ...(jobRunDurationSeconds ? { jobRunDurationSeconds: jobRunDurationSecondsTracker } : {}),
   stepRunsTotal: stepRunsTotalTracker,
-  stepRunDurationSeconds: stepRunDurationSecondsTracker,
+  ...(stepRunDurationSeconds ? { stepRunDurationSeconds: stepRunDurationSecondsTracker } : {}),
   runnerStatus: runnerStatusTracker,
 };

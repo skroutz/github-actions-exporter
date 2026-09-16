@@ -1,6 +1,6 @@
 {
   "name": "github-actions-exporter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Prometheus exporter for GitHub Actions workflow/job metrics, authenticated via a GitHub App, polling all repos an installation has access to.",
   "type": "module",
   "main": "src/index.js",

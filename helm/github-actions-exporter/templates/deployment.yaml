@@ -40,6 +40,12 @@ spec:
               value: {{ .Values.config.runsPerRepo | quote }}
             - name: ACTIVE_SINCE_DAYS
               value: {{ .Values.config.activeSinceDays | quote }}
+            - name: COLLECT_HISTOGRAMS
+              value: {{ .Values.config.collectHistograms | quote }}
+            - name: HISTOGRAM_BUCKETS
+              value: {{ .Values.config.histogramBuckets | quote }}
+            - name: INCLUDE_RUN_NUMBER_LABEL
+              value: {{ .Values.config.includeRunNumberLabel | quote }}
             - name: COLLECT_RUNNER_STATUS
               value: {{ .Values.config.collectRunnerStatus | quote }}
             - name: METRIC_TTL_DAYS
